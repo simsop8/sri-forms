@@ -1046,11 +1046,33 @@ function recomputeSharingGST() {
 function calcStampDuty(monthlyRent, leaseMonths) {
   const m = Number(leaseMonths), r = Number(monthlyRent);
   if (!m || !r) return '';
-  let d;
-  if (m <= 12) d = r * m * 0.004;
-  else if (m <= 36) d = r * 12 * 0.004;
-  else d = r * 48 * 0.004;
+  // IRAS lease duty: 0.4% x total rent for the lease period, capped at the
+  // rent-equivalent of 4 years (48 months) for leases longer than that (or of
+  // indefinite term). See iras.gov.sg "Renting a Property - Stamp Duty".
+  const cappedMonths = Math.min(m, 48);
+  const d = r * cappedMonths * 0.004;
   return String(Math.ceil(d));
+}
+
+// Human-readable breakdown of the calcStampDuty formula above, shown next to
+// the Stamp Duty field so users can sanity-check the auto-computed figure
+// instead of just seeing a number appear.
+function updateStampDutyHint() {
+  const hintEl = document.getElementById('stamp-duty-hint');
+  if (!hintEl) return;
+  const m = Number(S.data.lease_months) || 0;
+  const r = Number(S.data.monthly_rent) || 0;
+  if (!m || !r) { hintEl.textContent = ''; return; }
+  const capped = Math.min(m, 48);
+  const duty = calcStampDuty(r, m);
+  hintEl.textContent = `0.4% × S$${r.toLocaleString()} × ${capped} mo${m > 48 ? ' (capped at 48 mo / 4 yrs)' : ''} = S$${Number(duty).toLocaleString()}`;
+}
+
+// Unit label used in Fitting Out Period clauses so the printed wording
+// matches whichever unit (days/weeks/months) was picked in the fields panel.
+function fittingOutUnitLabel(d) {
+  const unit = d.fitting_out_unit || 'weeks';
+  return unit === 'days' ? 'day(s)' : unit === 'months' ? 'month(s)' : 'week(s)';
 }
 
 function toTitleCase(str) {
@@ -1173,21 +1195,28 @@ function triggerAutoFill(key) {
   if (key === 'advance_rent' && S.data.advance_rent) {
     setField('advance_rent_in_words', numToWords(S.data.advance_rent));
   }
-  if (['fitting_out_weeks','fitting_out_from','fitting_out_to'].includes(key)) {
+  if (['fitting_out_weeks','fitting_out_unit','fitting_out_from','fitting_out_to'].includes(key)) {
     const from = S.data.fitting_out_from;
     const to = S.data.fitting_out_to;
-    const weeks = parseInt(S.data.fitting_out_weeks);
-    if (key === 'fitting_out_weeks' || key === 'fitting_out_from') {
-      if (from && weeks > 0) {
+    const unit = S.data.fitting_out_unit || 'weeks';
+    const duration = parseInt(S.data.fitting_out_weeks);
+    if (key === 'fitting_out_weeks' || key === 'fitting_out_unit' || key === 'fitting_out_from') {
+      if (from && duration > 0) {
         const dt = new Date(from + 'T00:00:00');
-        dt.setDate(dt.getDate() + weeks * 7);
+        if (unit === 'days') dt.setDate(dt.getDate() + duration);
+        else if (unit === 'months') dt.setMonth(dt.getMonth() + duration);
+        else dt.setDate(dt.getDate() + duration * 7); // weeks
         setField('fitting_out_to', dt.toISOString().slice(0,10));
       }
     } else if (key === 'fitting_out_to') {
       if (from && to) {
-        const ms = new Date(to + 'T00:00:00') - new Date(from + 'T00:00:00');
-        const w = Math.round(ms / (7 * 24 * 60 * 60 * 1000));
-        if (w > 0) setField('fitting_out_weeks', String(w));
+        const fromDt = new Date(from + 'T00:00:00'), toDt = new Date(to + 'T00:00:00');
+        const days = Math.round((toDt - fromDt) / (24 * 60 * 60 * 1000));
+        let computed;
+        if (unit === 'days') computed = days;
+        else if (unit === 'months') computed = (toDt.getFullYear() - fromDt.getFullYear()) * 12 + (toDt.getMonth() - fromDt.getMonth());
+        else computed = Math.round(days / 7); // weeks
+        if (computed > 0) setField('fitting_out_weeks', String(computed));
       }
     }
   }
@@ -1590,6 +1619,13 @@ const FG_AGENT = {title:'👤 Agent Details', fields:[
 const FG_REQUIREMENTS = {title:'📝 Client Requirements', fields:[
   {type:'textarea', key:'client_requirements', label:'Special Requirements / Additional Clauses', rows:3, ph:'i. ...\nii. ...\niii. ...'},
 ]};
+// Same underlying field as FG_REQUIREMENTS (client_requirements) — used on the
+// Commercial/Industrial TA forms where it's framed as a single free-typed
+// clause tacked onto the end of the document, rather than a numbered list.
+const FG_ADDITIONAL_CLAUSE = {title:'📝 Additional Clause (Optional)', fields:[
+  {type:'textarea', key:'client_requirements', label:'Additional Clause — printed as the final clause of the Agreement', rows:3,
+    ph:'e.g. Contract to be transferable, and the Tenant may sublet part of the unit to any HDB-approved trade.'},
+]};
 const FG_DIPLOMATIC = {title:'🛂 Diplomatic Clause', fields:[
   {type:'select', key:'diplomatic_clause', label:'Include Diplomatic Clause?', options:[
     {v:'yes', l:'Yes — Include in document'},
@@ -1602,7 +1638,14 @@ const FG_DIPLOMATIC = {title:'🛂 Diplomatic Clause', fields:[
   ]},
 ]};
 const FG_FITTING_OUT = {title:'🔨 Fitting Out Period', fields:[
-  {type:'number', key:'fitting_out_weeks', label:'Fitting Out (weeks)', ph:'2'},
+  {type:'row', cols:2, fields:[
+    {type:'number', key:'fitting_out_weeks', label:'Fitting Out Duration', ph:'2'},
+    {type:'select', key:'fitting_out_unit', label:'Unit', options:[
+      {v:'weeks', l:'Week(s)'},
+      {v:'days', l:'Day(s)'},
+      {v:'months', l:'Month(s)'},
+    ], hint:'Updates the wording in the live preview'},
+  ]},
   {type:'row', cols:2, fields:[
     {type:'date', key:'fitting_out_from', label:'From'},
     {type:'date', key:'fitting_out_to', label:'To'},
@@ -1970,6 +2013,10 @@ const FIELD_DEFS = {
     FG_PROPERTY,
     {title:'🏠 Commercial Property', fields:[
       {type:'text', key:'intended_use', label:'Intended Use', ph:'Warehouse / Office / Showroom'},
+      {type:'select', key:'sublet_novation', label:'Sublet & Novation (Clause 16)', options:[
+        {v:'', l:'Not permitted without Landlord’s consent (default)'},
+        {v:'allowed', l:'Permitted, subject to Landlord’s consent'},
+      ], hint:'Controls the wording of Clause 16 — Not to Assign and Sublet'},
     ]},
     FG_LANDLORD,
     FG_TENANT,
@@ -1985,13 +2032,21 @@ const FIELD_DEFS = {
         {type:'number', key:'advance_rent', label:'Advance Rent (S$)', ph:''},
         {type:'text', key:'advance_rent_in_words', label:'Advance Rent in Words', ph:''},
       ]},
+      {type:'number', key:'stamp_duty', label:'Stamp Duty (S$)', ph:'', hint:'Auto-calculated: 0.4% × monthly rent × lease months, capped at 48 months (4 years) — the IRAS lease duty formula. Overwrite if your case differs.'},
+      {type:'html', html:'<div id="stamp-duty-hint" style="font-size:11px;color:#2563eb;font-weight:600;margin-top:-8px"></div>'},
     ]},
     FG_WITNESSES,
-    FG_REQUIREMENTS,
+    FG_ADDITIONAL_CLAUSE,
   ],
   ta_commercial_rofr: [
     FG_DATE,
     FG_PROPERTY,
+    {title:'🏠 Commercial Property', fields:[
+      {type:'select', key:'sublet_novation', label:'Sublet & Novation (Clause 16)', options:[
+        {v:'', l:'Not permitted without Landlord’s consent (default)'},
+        {v:'allowed', l:'Permitted, subject to Landlord’s consent'},
+      ], hint:'Controls the wording of Clause 16 — Not to Assign and Sublet'},
+    ]},
     FG_LANDLORD,
     FG_TENANT,
     FG_RENTAL_TERMS,
@@ -2006,9 +2061,11 @@ const FIELD_DEFS = {
         {type:'number', key:'advance_rent', label:'Advance Rent (S$)', ph:''},
         {type:'text', key:'advance_rent_in_words', label:'Advance Rent in Words', ph:''},
       ]},
+      {type:'number', key:'stamp_duty', label:'Stamp Duty (S$)', ph:'', hint:'Auto-calculated: 0.4% × monthly rent × lease months, capped at 48 months (4 years) — the IRAS lease duty formula. Overwrite if your case differs.'},
+      {type:'html', html:'<div id="stamp-duty-hint" style="font-size:11px;color:#2563eb;font-weight:600;margin-top:-8px"></div>'},
     ]},
     FG_WITNESSES,
-    FG_REQUIREMENTS,
+    FG_ADDITIONAL_CLAUSE,
   ],
   comm_buyer:     [FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_SELLER,      FG_COMM_SALE,   FG_COMM_AGENT],
   comm_buyer_hdb: [FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_SELLER,      FG_COMM_SALE,   FG_COMM_AGENT],
@@ -2313,6 +2370,7 @@ function renderDoc() {
   }
   el.innerHTML = html;
   syncPreviewHighlight(false);
+  updateStampDutyHint();
 }
 
 // ─── SCROLL PREVIEW TO ACTIVE FIELD ────────────────────────────
@@ -3158,11 +3216,14 @@ ta_commercial: d => `
 
   <p class="clause" style="margin-top:10px"><span class="clause-num">1. Demise, Term and Rent</span><br>
   In consideration of the rent and Tenant's covenants hereinafter reserved and contained, the Landlord hereby lets and the Tenant takes the premises situated at ${B(d.property_address,'300','property_address')} ("the Premises") TO HOLD unto the Tenant for a term of ${B(d.lease_months,'40','lease_months')} months commencing from ${B(fmtDateLong(d.commencement_date))} to ________________ (hereinafter referred to as "the term") YIELDING AND PAYING thereto unto the Landlord during the term the monthly rent of Singapore Dollars ${B(d.rent_in_words,'240','rent_in_words')} Only (S$${B(d.monthly_rent,'80','monthly_rent')}) (hereinafter called "the rent").<br>
-  Payment of the rent shall be payable monthly in advance without any demand deduction or setoff promptly on the ${B(d.rent_pay_day,'25','rent_pay_day')} day of each calendar month by crediting into the Landlord's account as follows:-<br>
-  Bank: ${B(d.bank_name,'120','bank_name')} &nbsp; Account: ${B(d.bank_account_no,'120','bank_account_no')} &nbsp; Name: ${B(d.bank_account_name,'160','bank_account_name')}</p>
+  Payment of the rent shall be payable monthly in advance without any demand deduction or setoff promptly on the ${B(d.rent_pay_day,'25','rent_pay_day')} day of each calendar month by crediting into the Landlord's account as follows:-</p>
+  <p class="clause" style="margin:2px 0 0 0">
+  Bank Name: ${B(d.bank_name,'160','bank_name')}<br>
+  Account Name: ${B(d.bank_account_name,'220','bank_account_name')}<br>
+  Account No.: ${B(d.bank_account_no,'160','bank_account_no')}</p>
 
   <p class="clause"><span class="clause-num">Fitting Out Period</span><br>
-  The Landlord shall make available to the Tenant, the Premises for fitting out works at its own expense for a period of ${B(d.fitting_out_weeks,'40','fitting_out_weeks')} week(s)/month(s) commencing from ${B(fmtDateLong(d.fitting_out_from))} to ${B(fmtDateLong(d.fitting_out_to))}, free of rent (hereinafter referred to as "the fitting out period"). No delay in carrying out and completing all or any of the fitting out works shall be a ground for postponing the commencement of the term or relieve in any way the Tenant from the performance of the covenants herein.</p>
+  The Landlord shall make available to the Tenant, the Premises for fitting out works at its own expense for a period of ${B(d.fitting_out_weeks,'40','fitting_out_weeks')} ${fittingOutUnitLabel(d)} commencing from ${B(fmtDateLong(d.fitting_out_from))} to ${B(fmtDateLong(d.fitting_out_to))}, free of rent (hereinafter referred to as "the fitting out period"). No delay in carrying out and completing all or any of the fitting out works shall be a ground for postponing the commencement of the term or relieve in any way the Tenant from the performance of the covenants herein.</p>
 
   <p class="clause"><span class="clause-num">Tenant's Covenants</span></p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Payment of Rent</span>(1) To pay the rent hereby reserved at the time and in the manner aforesaid.</p>
@@ -3180,7 +3241,7 @@ ta_commercial: d => `
   <p class="clause" style="margin-left:16px"><span class="r-label">Access to Landlord</span>(13) To permit the Landlord with or without workmen and others at all times of the day to enter upon the Premises to examine the condition thereof and to ascertain that there has been no breach or non-compliance by the Tenant.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Access to Landlord's Agents</span>(14) To permit the agents, servants and workmen engaged or authorized by the Landlord at all times of the day to enter and remain in the Premises so far as may be necessary or useful in order to examine, repair or rebuild any adjoining or contiguous premises.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Obstruction of Light and Air</span>(15) Not to cover or obstruct in any manner the windows, sky-lights or ventilating shafts or air inlets or outlets which reflect or admit light or enable air to flow into or out of the Premises.</p>
-  <p class="clause" style="margin-left:16px"><span class="r-label">Not to Assign and Sublet</span>(16) Not to assign sublet underlet licence or part with use or occupation of or part with or share the possession or occupation of the Premises or any part thereof without first obtaining the written consent of the Landlord.</p>
+  <p class="clause" style="margin-left:16px"><span class="r-label">Sublet, Assignment and Novation</span>${d.sublet_novation === 'allowed' ? `(16) The Tenant may, with the Landlord's prior written consent (such consent not to be unreasonably withheld), assign, sublet, novate, license or otherwise part with or share use, possession or occupation of the Premises or any part thereof, provided always that the Tenant shall remain liable for the due performance of all its obligations under this lease unless expressly released by the Landlord in writing.` : `(16) The Tenant shall not assign, sublet, novate, license, or otherwise part with or share use, possession or occupation of the Premises, or any part thereof, without first obtaining the Landlord's prior written consent.`}</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Compliance with Laws</span>(17) Not to do or permit anything to be done in the Premises which may infringe any law or bye-law or regulation for the time being in force affecting the Premises.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Compliance with Notices</span>(18) To forthwith comply with any notice that may be given by the Landlord requiring any breach of any of the stipulations conditions and covenants on the part of the Tenant to be remedied.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Prohibition Against Alterations</span>(19) Not at any time to make or permit to be made alterations in or extension to or external projections in the front of the Premises or decorations or redecorations or renovations or to install any machinery, electrical wiring, electrical fittings or any other fittings in the Premises except with the previous consent in writing of the Landlord.</p>
@@ -3195,7 +3256,7 @@ ta_commercial: d => `
   <p class="clause" style="margin-left:16px"><span class="r-label">Infectious Illness</span>(28) In the event of any infectious illness occurring in the Premises forthwith to give notice thereof to the Landlord and to the proper public authorities and at the expense of the Tenant to thoroughly fumigate and disinfect the Premises.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Information to Landlord</span>(29) Should the Tenant receive any notice from government or any governmental, public or other authority with respect to the Premises, to give notice thereof forthwith in writing to the Landlord.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Signs</span>(30) Not to affix, paint or otherwise exhibit on or upon any part or on the exterior of the Premises without the prior written consent of the Landlord and the relevant authorities where required by law, any signboard, announcement, placard, poster, advertisement, nameplate, flag or flagstaff.</p>
-  <p class="clause" style="margin-left:16px"><span class="r-label">Air-conditioning</span>(31) Where applicable, to maintain at the Tenant's own expense the air-conditioning system for the Premises at least once every three (3) months by a reliable and authorized contractor. Tenant to provide copy of air-conditioning maintenance contract &amp; report to Landlord. Any replacement parts, costs of major repairs will be borne by the Landlord unless caused by the negligence of the Tenant, its permitted occupier, occupants, employees, servants or invitees.</p>
+  <p class="clause" style="margin-left:16px"><span class="r-label">Air-conditioning</span>(31) Where applicable, the Tenant shall, at its own cost and expense, engage a reliable and authorized air-conditioning contractor to service and maintain the air-conditioning system serving the Premises at least once every three (3) months, and shall bear the cost of any repairs, replacement of parts or other works required to keep the air-conditioning system in good working condition, save that the Landlord shall arrange and bear the cost of the first servicing and maintenance check of the air-conditioning system following the commencement of the term. The Tenant shall furnish the Landlord with a copy of the air-conditioning maintenance contract and each subsequent service report.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Immigration Act</span>(32) Not to use, permit or suffer the said premises to be kept or used as a place in which any person is employed in contravention of Section 57(1)(e) of the Immigration Act 1959 and to indemnify the Landlord against all costs, claims, liabilities, fines or expenses whatsoever which may fall upon the Landlord by reason of non-compliance thereof.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Tenant's Indemnity</span>(33) To indemnify and keep the Landlord indemnified and hold harmless the Landlord from and against all actions, claims, demands, losses, damages, costs and expenses arising from: (a) the act, default, negligence, misuse, waste or abuse by the Tenant or any servant, agent, customer or invitee; (b) overflow or leakage of water; (c) loss, damage, or injury from any cause whatsoever to property or person caused by use of the Premises by the Tenant; or (d) failure on the part of the Tenant to perform and observe all or any of the provisions of this lease.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Viewing of Premises</span>(34) To permit the Landlord at any time during the last six (6) months of the term to affix upon any suitable part(s) of the Premises notice(s) for re-letting and to permit all persons with written authority from the Landlord at reasonable times of the day to view the Premises by prior appointment only.</p>
@@ -3223,7 +3284,7 @@ ta_commercial: d => `
   <p class="clause" style="margin-left:16px"><span class="r-label">Removal of Property After Determination</span>(12) In the event the Tenant has vacated the Premises after the determination of this lease and any property of the Tenant remains in or on the Premises and the Tenant shall fail to remove the same within seven (7) days after being requested by the Landlord, the Landlord shall be entitled and shall be deemed to be authorized by the Tenant to deal with and to dispose of such property in any manner as the Landlord deems fit.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Governing Law</span>(13) This lease shall be governed by and construed in accordance with the laws of Singapore.</p>
 
-  ${d.client_requirements ? `<p class="clause"><strong>Additional Conditions / Client Requirements:</strong><br>${esc(d.client_requirements)}</p>` : ''}
+  ${d.client_requirements ? `<p class="clause"><strong>Additional Clause:</strong><br>${esc(d.client_requirements)}</p>` : ''}
 
   <p style="margin-top:20px"><strong>FOR COMPANIES</strong></p>
   <div class="sig-grid" style="margin-top:12px">
@@ -3255,11 +3316,14 @@ ta_commercial_rofr: d => `
 
   <p class="clause" style="margin-top:10px"><span class="clause-num">1. Demise, Term and Rent</span><br>
   In consideration of the rent and Tenant's covenants hereinafter reserved and contained, the Landlord hereby lets and the Tenant takes the premises situated at ${B(d.property_address,'300','property_address')} ("the Premises") TO HOLD unto the Tenant for a term of ${B(d.lease_months,'40','lease_months')} months commencing from ${B(fmtDateLong(d.commencement_date))} to ________________ (hereinafter referred to as "the term") YIELDING AND PAYING thereto unto the Landlord during the term the monthly rent of Singapore Dollars ${B(d.rent_in_words,'240','rent_in_words')} Only (S$${B(d.monthly_rent,'80','monthly_rent')}) (hereinafter called "the rent").<br>
-  Payment of the rent shall be payable monthly in advance without any demand deduction or setoff promptly on the ${B(d.rent_pay_day,'25','rent_pay_day')} day of each calendar month by crediting into the Landlord's account as follows:-<br>
-  Bank: ${B(d.bank_name,'120','bank_name')} &nbsp; Account: ${B(d.bank_account_no,'120','bank_account_no')} &nbsp; Name: ${B(d.bank_account_name,'160','bank_account_name')}</p>
+  Payment of the rent shall be payable monthly in advance without any demand deduction or setoff promptly on the ${B(d.rent_pay_day,'25','rent_pay_day')} day of each calendar month by crediting into the Landlord's account as follows:-</p>
+  <p class="clause" style="margin:2px 0 0 0">
+  Bank Name: ${B(d.bank_name,'160','bank_name')}<br>
+  Account Name: ${B(d.bank_account_name,'220','bank_account_name')}<br>
+  Account No.: ${B(d.bank_account_no,'160','bank_account_no')}</p>
 
   <p class="clause"><span class="clause-num">Fitting Out Period</span><br>
-  The Landlord shall make available to the Tenant, the Premises for fitting out works at its own expense for a period of ${B(d.fitting_out_weeks,'40','fitting_out_weeks')} week(s)/month(s) commencing from ${B(fmtDateLong(d.fitting_out_from))} to ${B(fmtDateLong(d.fitting_out_to))}, free of rent (hereinafter referred to as "the fitting out period"). No delay in carrying out and completing all or any of the fitting out works shall be a ground for postponing the commencement of the term or relieve in any way the Tenant from the performance of the covenants herein.</p>
+  The Landlord shall make available to the Tenant, the Premises for fitting out works at its own expense for a period of ${B(d.fitting_out_weeks,'40','fitting_out_weeks')} ${fittingOutUnitLabel(d)} commencing from ${B(fmtDateLong(d.fitting_out_from))} to ${B(fmtDateLong(d.fitting_out_to))}, free of rent (hereinafter referred to as "the fitting out period"). No delay in carrying out and completing all or any of the fitting out works shall be a ground for postponing the commencement of the term or relieve in any way the Tenant from the performance of the covenants herein.</p>
 
   <p class="clause"><span class="clause-num">Tenant's Covenants</span></p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Payment of Rent</span>(1) To pay the rent hereby reserved at the time and in the manner aforesaid.</p>
@@ -3277,7 +3341,7 @@ ta_commercial_rofr: d => `
   <p class="clause" style="margin-left:16px"><span class="r-label">Access to Landlord</span>(13) To permit the Landlord with or without workmen and others at all times of the day to enter upon the Premises to examine the condition thereof.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Access to Landlord's Agents</span>(14) To permit the agents, servants and workmen engaged or authorized by the Landlord at all times of the day to enter and remain in the Premises so far as may be necessary or useful in order to examine, repair or rebuild any adjoining or contiguous premises.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Obstruction of Light and Air</span>(15) Not to cover or obstruct in any manner the windows, sky-lights or ventilating shafts or air inlets or outlets which reflect or admit light or enable air to flow into or out of the Premises.</p>
-  <p class="clause" style="margin-left:16px"><span class="r-label">Not to Assign and Sublet</span>(16) Not to assign sublet underlet licence or part with use or occupation of or part with or share the possession or occupation of the Premises or any part thereof without first obtaining the written consent of the Landlord.</p>
+  <p class="clause" style="margin-left:16px"><span class="r-label">Sublet, Assignment and Novation</span>${d.sublet_novation === 'allowed' ? `(16) The Tenant may, with the Landlord's prior written consent (such consent not to be unreasonably withheld), assign, sublet, novate, license or otherwise part with or share use, possession or occupation of the Premises or any part thereof, provided always that the Tenant shall remain liable for the due performance of all its obligations under this lease unless expressly released by the Landlord in writing.` : `(16) The Tenant shall not assign, sublet, novate, license, or otherwise part with or share use, possession or occupation of the Premises, or any part thereof, without first obtaining the Landlord's prior written consent.`}</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Compliance with Laws</span>(17) Not to do or permit anything to be done in the Premises which may infringe any law or bye-law or regulation for the time being in force affecting the Premises.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Compliance with Notices</span>(18) To forthwith comply with any notice that may be given by the Landlord requiring any breach of any of the stipulations conditions and covenants on the part of the Tenant to be remedied.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Prohibition Against Alterations</span>(19) Not at any time to make or permit to be made alterations in or extension to the Premises or to install any machinery, electrical wiring, electrical fittings or any other fittings in the Premises except with the previous consent in writing of the Landlord.</p>
@@ -3292,7 +3356,7 @@ ta_commercial_rofr: d => `
   <p class="clause" style="margin-left:16px"><span class="r-label">Infectious Illness</span>(28) In the event of any infectious illness occurring in the Premises forthwith to give notice thereof to the Landlord and to the proper public authorities and at the expense of the Tenant to thoroughly fumigate and disinfect the Premises.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Information to Landlord</span>(29) Should the Tenant receive any notice from government or any governmental, public or other authority with respect to the Premises, to give notice thereof forthwith in writing to the Landlord.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Signs</span>(30) Not to affix, paint or otherwise exhibit on or upon any part or on the exterior of the Premises without the prior written consent of the Landlord and the relevant authorities where required by law, any signboard, announcement, placard, poster, advertisement, nameplate, flag or flagstaff.</p>
-  <p class="clause" style="margin-left:16px"><span class="r-label">Air-conditioning</span>(31) Where applicable, to maintain at the Tenant's own expense the air-conditioning system for the Premises at least once every three (3) months by a reliable and authorized contractor. Tenant to provide copy of air-conditioning maintenance contract &amp; report to Landlord. Any replacement parts, costs of major repairs will be borne by the Landlord unless caused by the negligence of the Tenant.</p>
+  <p class="clause" style="margin-left:16px"><span class="r-label">Air-conditioning</span>(31) Where applicable, the Tenant shall, at its own cost and expense, engage a reliable and authorized air-conditioning contractor to service and maintain the air-conditioning system serving the Premises at least once every three (3) months, and shall bear the cost of any repairs, replacement of parts or other works required to keep the air-conditioning system in good working condition, save that the Landlord shall arrange and bear the cost of the first servicing and maintenance check of the air-conditioning system following the commencement of the term. The Tenant shall furnish the Landlord with a copy of the air-conditioning maintenance contract and each subsequent service report.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Immigration Act</span>(32) Not to use, permit or suffer the said premises to be kept or used as a place in which any person is employed in contravention of Section 57(1)(e) of the Immigration Act 1959 and to indemnify the Landlord against all costs, claims, liabilities, fines or expenses whatsoever which may fall upon the Landlord by reason of non-compliance thereof.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Tenant's Indemnity</span>(33) To indemnify and keep the Landlord indemnified and hold harmless the Landlord from and against all actions, claims, demands, losses, damages, costs and expenses arising from the act, default, negligence, misuse, waste or abuse by the Tenant or any servant, agent, customer or invitee; or as a result of the failure on the part of the Tenant to perform and observe all or any of the provisions of this lease.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">Viewing of Premises</span>(34) To permit the Landlord at any time during the last six (6) months of the term to affix upon any suitable part(s) of the Premises notice(s) for re-letting and to permit all persons with written authority from the Landlord at reasonable times of the day to view the Premises by prior appointment only.</p>
@@ -3321,7 +3385,7 @@ ta_commercial_rofr: d => `
   <p class="clause" style="margin-left:16px"><span class="r-label">Governing Law</span>(13) This lease shall be governed by and construed in accordance with the laws of Singapore.</p>
   <p class="clause" style="margin-left:16px"><span class="r-label">First Right of Refusal to Purchase</span>(18) <strong>First Right of Refusal to Purchase:</strong> Subject to clause 4(7) and provided that the Tenant is not in breach of any of the terms of this Agreement, the Landlord shall grant the Tenant the right of first refusal to purchase the Property at such price and on such terms as the parties shall mutually agree in the event the Landlord wishes to sell the Property. The Tenant must exercise this right within fourteen (14) days of receiving written notice from the Landlord.</p>
 
-  ${d.client_requirements ? `<p class="clause"><strong>Additional Conditions / Client Requirements:</strong><br>${esc(d.client_requirements)}</p>` : ''}
+  ${d.client_requirements ? `<p class="clause"><strong>Additional Clause:</strong><br>${esc(d.client_requirements)}</p>` : ''}
 
   <p style="margin-top:20px"><strong>FOR COMPANIES</strong></p>
   <div class="sig-grid" style="margin-top:12px">
