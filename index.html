@@ -1033,7 +1033,7 @@ function numToWords(amount) {
   return 'Singapore Dollars '+tw(n)+' Only';
 }
 
-const GST_BREAKDOWN_FORMS = new Set(['comm_sharing','comm_seller_res','comm_landlord_res','comm_tenant']);
+const GST_BREAKDOWN_FORMS = new Set(['comm_sharing','comm_seller','comm_seller_res','comm_landlord','comm_landlord_res','comm_tenant']);
 function recomputeSharingGST() {
   const comm = parseFloat(S.data.commission) || 0;
   const rate = parseFloat(S.data.gst_rate ?? '9') / 100;
@@ -1704,6 +1704,11 @@ const FG_COMM_RENTAL = {title:'💰 Transaction Details', fields:[
     {type:'number', key:'commission_pct', label:'Commission (%)', ph:'e.g. 1', hint:'Enter % or $ — both sync'},
     {type:'number', key:'commission', label:'Commission (S$)', ph:'Auto-fills'},
   ]},
+  {type:'row', cols:3, fields:[
+    {type:'number', key:'gst_rate', label:'GST Rate (%)', ph:'9', hint:'Default 9% — update if rate changes'},
+    {type:'number', key:'gst_amount', label:'GST (S$)', ph:'Auto-computes', hint:'Auto-computed'},
+    {type:'number', key:'commission_total', label:'Total incl. GST (S$)', ph:'Auto-computes', hint:'Auto-computed'},
+  ]},
 ]};
 // Residential Tenant Commission Agreement — same shape as FG_COMM_RENTAL_RES
 // (lease duration + GST) but the letter shows one figure ("inclusive of GST");
@@ -2007,7 +2012,7 @@ const FIELD_DEFS = {
   ],
   comm_buyer:     [FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_SELLER,      FG_COMM_SALE,   FG_COMM_AGENT],
   comm_buyer_hdb: [FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_SELLER,      FG_COMM_SALE,   FG_COMM_AGENT],
-  comm_seller:    [FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_BUYER,       FG_COMM_SALE,   FG_COMM_SOLICITORS, FG_COMM_AGENT],
+  comm_seller:    [FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_BUYER,       FG_COMM_SALE_RES, FG_COMM_SOLICITORS, FG_COMM_AGENT],
   comm_seller_res:[FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_BUYER,       FG_COMM_SALE_RES, FG_COMM_SOLICITORS, FG_COMM_AGENT],
   comm_seller_hdb:[FG_DATE, FG_COMM_BILLING, FG_PROPERTY, FG_COMM_BUYER,       FG_COMM_SALE,   FG_COMM_SOLICITORS, FG_COMM_AGENT],
   comm_landlord:  [FG_DATE, FG_COMM_BILLING_RENTAL, FG_PROPERTY, FG_COMM_TENANT_CP,   FG_COMM_RENTAL, FG_COMM_AGENT],
@@ -3391,7 +3396,7 @@ comm_seller: d => {
   <p style="margin-top:10px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
   <p style="margin-top:10px">Dear Sir/Madam,</p>
   <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} subject to Goods and Services Tax, and your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
+  <p style="margin-top:10px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling S$${fmtAmt(d.commission_total)||B('','120')}, and your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
   <p style="margin-top:10px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
   <p style="margin-top:16px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
   <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
@@ -3449,14 +3454,15 @@ comm_landlord: d => {
   const agentSigs = agents.length ? agents.map(a=>`<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B(a.name,'160')}</p><p>CEA Reg. No.: ${B(a.cea,'120')}</p></div>`).join('') : `<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B('','160')}</p><p>CEA Reg. No.: ${B('','120')}</p></div><div></div>`;
   const sigName = c => c.co_option === 'co' && c.co_name ? c.co_name : c.name;
   const clientSigs = clients.length ? clients.map((c,i)=>`<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B(sigName(c),'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>${sigDateField(d,`sig_client_${i+1}_date`)}</div>`).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
-  const commWords = d.commission ? `${numToWords(d.commission)} only (S$${fmtAmt(d.commission)}/=)` : '';
+  const commTotal = d.commission_total || d.commission;
+  const commWords = commTotal ? `${numToWords(commTotal)} only (S$${fmtAmt(commTotal)}/=)` : '';
   return `${docInfoBar(d,'commission')}
   ${docBanner("Landlord's Commission Agreement","(For Non-Residential Transactions Only)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
   <p style="margin-top:10px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
   <p style="margin-top:10px">Dear Sir/Madam,</p>
   <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the tenant ${B(d.counterparty_name,'300','counterparty_name')} to rent your abovementioned property at an agreed monthly rental of S$${fmtAmt(d.monthly_rent)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} subject to Goods and Services Tax made payable to SRI PTE LTD.</p>
+  <p style="margin-top:10px">In consideration of our introduction of the tenant ${B(d.counterparty_name,'300','counterparty_name')} to rent your abovementioned property at an agreed monthly rental of S$${fmtAmt(d.monthly_rent)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling ${commWords||B('','300')} inclusive of Goods and Services Tax made payable to SRI PTE LTD.</p>
   <p style="margin-top:10px">If the tenancy is renewed or extended, you shall upon signing of the new or extended tenancy contract pay us a further commission of one-half (½) month's revised gross rental exclusive of Goods and Services Tax thereon for every Twelve (12) months or part thereof of the new or extended tenancy. There shall be no refund or reduction of any commission or any part thereof should the tenancy be prematurely terminated for any reason whatsoever.</p>
   <p style="margin-top:10px">Should you be entitled to forfeit any good faith deposit or any other amount paid on account of the tenancy of the Property, you shall pay us one-half (½) of such monies, subject to a maximum sum equivalent to the said commission.</p>
   <p style="margin-top:10px">You confirm that where applicable, you have obtained all preliminary approvals from the relevant parties and competent authorities to rent out the Property.</p>
