@@ -3287,17 +3287,12 @@ ta_commercial: d => `
 
   ${d.client_requirements ? `<p class="clause"><strong>Additional Clause:</strong><br>${esc(d.client_requirements)}</p>` : ''}
 
-  <p style="margin-top:20px"><strong>FOR COMPANIES</strong></p>
-  <div class="sig-grid" style="margin-top:12px">
+  <div class="sig-grid" style="margin-top:20px">
     <div>
-      <div class="sig-line">Signed by the Authorised Signatory of the Landlord</div>
-      ${partyList(d,'landlord').map(p=>`<p>Name: ${B(p.name,'160')}</p><p>NRIC No.: ${B(p.nric,'120')}</p>`).join('')}
-      <p style="margin-top:4px">(Sign and Affix Company Rubber Stamp)</p>
+      ${partyList(d,'landlord').map((p,i)=>sigPad(d,`sig_ll_${i+1}`,`Authorised Signatory of the Landlord${i>0?' '+(i+1):''}`,`Name: ${B(p.name,'160')}<br>NRIC No.: ${B(p.nric,'120')}`)).join('')}
     </div>
     <div>
-      <div class="sig-line">Signed by the Authorised Signatory of the Tenant</div>
-      ${partyList(d,'tenant').map(p=>`<p>Name: ${B(p.name,'160')}</p><p>NRIC No.: ${B(p.nric,'120')}</p>`).join('')}
-      <p style="margin-top:4px">(Sign and Affix Company Rubber Stamp)</p>
+      ${partyList(d,'tenant').map((p,i)=>sigPad(d,`sig_te_${i+1}`,`Authorised Signatory of the Tenant${i>0?' '+(i+1):''}`,`Name: ${B(p.name,'160')}<br>NRIC No.: ${B(p.nric,'120')}`)).join('')}
     </div>
   </div>
   ${witnessSigBlock(d)}
@@ -3389,17 +3384,12 @@ ta_commercial_rofr: d => `
 
   ${d.client_requirements ? `<p class="clause"><strong>Additional Clause:</strong><br>${esc(d.client_requirements)}</p>` : ''}
 
-  <p style="margin-top:20px"><strong>FOR COMPANIES</strong></p>
-  <div class="sig-grid" style="margin-top:12px">
+  <div class="sig-grid" style="margin-top:20px">
     <div>
-      <div class="sig-line">Signed by the Authorised Signatory of the Landlord</div>
-      ${partyList(d,'landlord').map(p=>`<p>Name: ${B(p.name,'160')}</p><p>NRIC No.: ${B(p.nric,'120')}</p>`).join('')}
-      <p style="margin-top:4px">(Sign and Affix Company Rubber Stamp)</p>
+      ${partyList(d,'landlord').map((p,i)=>sigPad(d,`sig_ll_${i+1}`,`Authorised Signatory of the Landlord${i>0?' '+(i+1):''}`,`Name: ${B(p.name,'160')}<br>NRIC No.: ${B(p.nric,'120')}`)).join('')}
     </div>
     <div>
-      <div class="sig-line">Signed by the Authorised Signatory of the Tenant</div>
-      ${partyList(d,'tenant').map(p=>`<p>Name: ${B(p.name,'160')}</p><p>NRIC No.: ${B(p.nric,'120')}</p>`).join('')}
-      <p style="margin-top:4px">(Sign and Affix Company Rubber Stamp)</p>
+      ${partyList(d,'tenant').map((p,i)=>sigPad(d,`sig_te_${i+1}`,`Authorised Signatory of the Tenant${i>0?' '+(i+1):''}`,`Name: ${B(p.name,'160')}<br>NRIC No.: ${B(p.nric,'120')}`)).join('')}
     </div>
   </div>
   ${witnessSigBlock(d)}
