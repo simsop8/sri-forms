@@ -3568,23 +3568,23 @@ comm_tenant: d => {
   const clientSigs = clients.length ? clients.map((c,i)=>`<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B(sigName(c),'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>${sigDateField(d,`sig_client_${i+1}_date`)}</div>`).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
   const commTotal = d.commission_total || d.commission;
   const commWords = commTotal ? `${numToWords(commTotal)} (S$${fmtAmt(commTotal)}/=)` : '';
-  return `${docInfoBar(d,'commission')}
+  return `<div class="doc-letter">${docInfoBar(d,'commission')}
   ${docBanner("Tenant's Commission Agreement","(For Residential Transactions Only)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
-  <p style="margin-top:8px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
-  <p style="margin-top:8px">Dear Sir/Madam,</p>
-  <p style="margin-top:8px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:8px">In consideration of our introduction for you to rent the abovementioned property from ${B(d.counterparty_name,'300','counterparty_name')} (the "Landlord") at an agreed monthly rental of ${d.monthly_rent?numToWords(d.monthly_rent)+` (S$${fmtAmt(d.monthly_rent)}/=)`:B('','200')} for the duration of ${B(d.comm_lease_months,'40','comm_lease_months')} mths from ${d.comm_lease_start?B(fmtDateLong(d.comm_lease_start),'140','comm_lease_start'):B('','140','comm_lease_start')} to ${d.comm_lease_end?B(fmtDateLong(d.comm_lease_end),'140','comm_lease_end'):B('','140','comm_lease_end')}, you have agreed to pay us a commission of S$${fmtAmt(commTotal)||B('','120')} (inclusive of Goods and Services Tax) made payable to SRI PTE LTD.</p>
-  <p style="margin-top:8px">If the tenancy is renewed or extended, you shall upon signing of the new or extended tenancy contract pay us a further commission of one-half (½) month's revised gross rental exclusive of Goods and Services Tax thereon for every Twelve (12) months or part thereof of the new or extended tenancy.</p>
-  <p style="margin-top:8px">There shall be no refund or reduction of any commission or any part thereof should the tenancy be prematurely terminated for any reason whatsoever.</p>
-  <p style="margin-top:8px">You shall ensure that all occupants of the Property during the term of the tenancy comply with all applicable laws for entering and staying in Singapore. You confirm, where applicable, you are eligible under the Housing & Development Board policies and requirements to rent the Property.</p>
-  <p style="margin-top:8px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
-  <p style="margin-top:12px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
-  <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
-  <hr style="margin:16px 0;border:none;border-top:1px dashed #999">
-  <p style="text-align:center;font-weight:bold;margin-bottom:8px">Acceptance Copy</p>
+  <p style="margin-top:5px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
+  <p style="margin-top:5px">Dear Sir/Madam,</p>
+  <p style="margin-top:5px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
+  <p style="margin-top:5px">In consideration of our introduction for you to rent the abovementioned property from ${B(d.counterparty_name,'300','counterparty_name')} (the "Landlord") at an agreed monthly rental of ${d.monthly_rent?numToWords(d.monthly_rent)+` (S$${fmtAmt(d.monthly_rent)}/=)`:B('','200')} for the duration of ${B(d.comm_lease_months,'40','comm_lease_months')} mths from ${d.comm_lease_start?B(fmtDateLong(d.comm_lease_start),'140','comm_lease_start'):B('','140','comm_lease_start')} to ${d.comm_lease_end?B(fmtDateLong(d.comm_lease_end),'140','comm_lease_end'):B('','140','comm_lease_end')}, you have agreed to pay us a commission of S$${fmtAmt(commTotal)||B('','120')} (inclusive of Goods and Services Tax) made payable to SRI PTE LTD.</p>
+  <p style="margin-top:5px">If the tenancy is renewed or extended, you shall upon signing of the new or extended tenancy contract pay us a further commission of one-half (½) month's revised gross rental exclusive of Goods and Services Tax thereon for every Twelve (12) months or part thereof of the new or extended tenancy.</p>
+  <p style="margin-top:5px">There shall be no refund or reduction of any commission or any part thereof should the tenancy be prematurely terminated for any reason whatsoever.</p>
+  <p style="margin-top:5px">You shall ensure that all occupants of the Property during the term of the tenancy comply with all applicable laws for entering and staying in Singapore. You confirm, where applicable, you are eligible under the Housing & Development Board policies and requirements to rent the Property.</p>
+  <p style="margin-top:5px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
+  <p style="margin-top:8px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
+  <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
+  <hr style="margin:10px 0;border:none;border-top:1px dashed #999">
+  <p style="text-align:center;font-weight:bold;margin-bottom:6px">Acceptance Copy</p>
   <p>We confirm acknowledgement of the commissions amount of <u>${commWords||B('','300')}</u> inclusive of Goods and Services Tax. Payment will be made upon receiving a copy of the Invoice from SRI Pte Ltd.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:14px">${clientSigs}</div>`;
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:10px">${clientSigs}</div></div>`;
 },
 
 // ── COBROKE & ASSIGNMENT AGREEMENTS ───────────────────────────
