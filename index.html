@@ -133,6 +133,13 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 #doc-preview .blank.field-active.empty{color:#78716c}
 #doc-preview .sig-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:40px}
 #doc-preview .sig-line{border-top:1px solid #000;padding-top:6px;margin-top:48px;font-size:9.5pt}
+/* Commission letter (Seller/Landlord Non-Res, Res, HDB): tightened spacing so the
+   whole one-page letter — body + salesperson signature + Acceptance Copy + signatory
+   block(s) — reliably prints on a single A4 page instead of spilling a near-empty
+   second page (which was clipping/crowding the landlord signature near the page edge). */
+#doc-preview .doc-letter{font-size:9.8pt;line-height:1.26}
+#doc-preview .doc-letter .sig-line{margin-top:20px}
+#doc-preview .doc-letter p{margin-bottom:6px}
 .handover-form td,.handover-form th{padding:3px 6px!important}
 .handover-form table{margin-bottom:6px!important}
 .handover-form .sig-line{margin-top:22px!important}
@@ -3446,20 +3453,20 @@ comm_seller: d => {
   const agents = partyList(d,'comm_agent');
   const agentSigs = agents.length ? agents.map(a=>`<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B(a.name,'160')}</p><p>CEA Reg. No.: ${B(a.cea,'120')}</p></div>`).join('') : `<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B('','160')}</p><p>CEA Reg. No.: ${B('','120')}</p></div><div></div>`;
   const clientSigs = clients.length ? clients.map((c,i)=>`<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B(c.name,'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>${sigDateField(d,`sig_client_${i+1}_date`)}</div>`).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
-  return `${docInfoBar(d,'commission')}
+  return `<div class="doc-letter">${docInfoBar(d,'commission')}
   ${docBanner("Seller's Commission Agreement","(For Non-Residential Transactions Only)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
-  <p style="margin-top:10px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
-  <p style="margin-top:10px">Dear Sir/Madam,</p>
-  <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling S$${fmtAmt(d.commission_total)||B('','120')}, and your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
-  <p style="margin-top:10px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
-  <p style="margin-top:16px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
-  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
-  <hr style="margin:24px 0;border:none;border-top:1px dashed #999">
+  <p style="margin-top:6px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
+  <p style="margin-top:6px">Dear Sir/Madam,</p>
+  <p style="margin-top:6px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
+  <p style="margin-top:6px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling S$${fmtAmt(d.commission_total)||B('','120')}, and your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
+  <p style="margin-top:6px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
+  <p style="margin-top:10px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
+  <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
+  <hr style="margin:12px 0;border:none;border-top:1px dashed #999">
   <p style="text-align:center;font-weight:bold;margin-bottom:12px">Acceptance Copy</p>
   <p>I/We, ${clients.length ? clients.map(c=>B(c.name,'200')).join(' and ') : B('','200')}, hereby confirm my/our acceptance to the above terms.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:20px">${clientSigs}</div>`;
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:12px">${clientSigs}</div></div>`;
 },
 comm_seller_res: d => {
   const role = 'Seller';
@@ -3467,20 +3474,20 @@ comm_seller_res: d => {
   const agents = partyList(d,'comm_agent');
   const agentSigs = agents.length ? agents.map(a=>`<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B(a.name,'160')}</p><p>CEA Reg. No.: ${B(a.cea,'120')}</p></div>`).join('') : `<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B('','160')}</p><p>CEA Reg. No.: ${B('','120')}</p></div><div></div>`;
   const clientSigs = clients.length ? clients.map((c,i)=>`<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B(c.name,'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>${sigDateField(d,`sig_client_${i+1}_date`)}</div>`).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
-  return `${docInfoBar(d,'commission')}
+  return `<div class="doc-letter">${docInfoBar(d,'commission')}
   ${docBanner("Seller's Commission Agreement","(For Residential Transactions Only)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
-  <p style="margin-top:10px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
-  <p style="margin-top:10px">Dear Sir/Madam,</p>
-  <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling S$${fmtAmt(d.commission_total)||B('','120')}, and your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
-  <p style="margin-top:10px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
-  <p style="margin-top:16px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
-  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
-  <hr style="margin:24px 0;border:none;border-top:1px dashed #999">
+  <p style="margin-top:6px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
+  <p style="margin-top:6px">Dear Sir/Madam,</p>
+  <p style="margin-top:6px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
+  <p style="margin-top:6px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling S$${fmtAmt(d.commission_total)||B('','120')}, and your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
+  <p style="margin-top:6px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
+  <p style="margin-top:10px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
+  <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
+  <hr style="margin:12px 0;border:none;border-top:1px dashed #999">
   <p style="text-align:center;font-weight:bold;margin-bottom:12px">Acceptance Copy</p>
   <p>I/We, ${clients.length ? clients.map(c=>B(c.name,'200')).join(' and ') : B('','200')}, hereby confirm my/our acceptance to the above terms.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:20px">${clientSigs}</div>`;
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:12px">${clientSigs}</div></div>`;
 },
 comm_seller_hdb: d => {
   const role = 'Seller';
@@ -3488,20 +3495,20 @@ comm_seller_hdb: d => {
   const agents = partyList(d,'comm_agent');
   const agentSigs = agents.length ? agents.map(a=>`<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B(a.name,'160')}</p><p>CEA Reg. No.: ${B(a.cea,'120')}</p></div>`).join('') : `<div><div class="sig-line">Signature of Salesperson</div><p>Name: ${B('','160')}</p><p>CEA Reg. No.: ${B('','120')}</p></div><div></div>`;
   const clientSigs = clients.length ? clients.map((c,i)=>`<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B(c.name,'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>${sigDateField(d,`sig_client_${i+1}_date`)}</div>`).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
-  return `${docInfoBar(d,'commission')}
+  return `<div class="doc-letter">${docInfoBar(d,'commission')}
   ${docBanner("(HDB) Seller's Commission Agreement","(For HDB Transactions)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
-  <p style="margin-top:10px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
-  <p style="margin-top:10px">Dear Sir/Madam,</p>
-  <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} subject to Goods and Services Tax. Your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale if you have appointed a solicitor to represent you in the sale. Where HDB's approval for the sale is not granted as a result of any negligence omission or deliberate default, you have agreed to pay us the agreed commission. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
-  <p style="margin-top:10px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
-  <p style="margin-top:16px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
-  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
-  <hr style="margin:24px 0;border:none;border-top:1px dashed #999">
+  <p style="margin-top:6px">${clients.map((c,i)=>`${i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '}${B(c.name,'220')}${i===0?' (Billing Name)':''}<br>${B(c.address,'300')}`).join('<br>')}</p>
+  <p style="margin-top:6px">Dear Sir/Madam,</p>
+  <p style="margin-top:6px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
+  <p style="margin-top:6px">In consideration of our introduction of the purchaser(s) ${B(d.counterparty_name,'300','counterparty_name')} to buy your abovementioned property at an agreed sale price of S$${fmtAmt(d.sale_price)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} subject to Goods and Services Tax. Your solicitors, ${B(d.solicitors,'260','solicitors')} will accept this as your irrevocable authority to retain the commission from the sale proceeds and to pay the same direct to SRI PTE LTD forthwith on the completion of the sale if you have appointed a solicitor to represent you in the sale. Where HDB's approval for the sale is not granted as a result of any negligence omission or deliberate default, you have agreed to pay us the agreed commission. Should any monies paid for the purchase of the said property be forfeited by you, then half (½) of the forfeited shall be paid to us providing the same amount does not exceed the commission.</p>
+  <p style="margin-top:6px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
+  <p style="margin-top:10px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
+  <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
+  <hr style="margin:12px 0;border:none;border-top:1px dashed #999">
   <p style="text-align:center;font-weight:bold;margin-bottom:12px">Acceptance Copy</p>
   <p>I/We, ${clients.length ? clients.map(c=>B(c.name,'200')).join(' and ') : B('','200')}, hereby confirm my/our acceptance to the above terms.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:20px">${clientSigs}</div>`;
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:12px">${clientSigs}</div></div>`;
 },
 comm_landlord: d => {
   const role = 'Landlord';
@@ -3512,23 +3519,23 @@ comm_landlord: d => {
   const clientSigs = clients.length ? clients.map((c,i)=>`<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B(sigName(c),'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>${sigDateField(d,`sig_client_${i+1}_date`)}</div>`).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
   const commTotal = d.commission_total || d.commission;
   const commWords = commTotal ? `${numToWords(commTotal)} only (S$${fmtAmt(commTotal)}/=)` : '';
-  return `${docInfoBar(d,'commission')}
+  return `<div class="doc-letter">${docInfoBar(d,'commission')}
   ${docBanner("Landlord's Commission Agreement","(For Non-Residential Transactions Only)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
-  <p style="margin-top:10px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
-  <p style="margin-top:10px">Dear Sir/Madam,</p>
-  <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the tenant ${B(d.counterparty_name,'300','counterparty_name')} to rent your abovementioned property at an agreed monthly rental of S$${fmtAmt(d.monthly_rent)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling ${commWords||B('','300')} inclusive of Goods and Services Tax made payable to SRI PTE LTD.</p>
-  <p style="margin-top:10px">If the tenancy is renewed or extended, you shall upon signing of the new or extended tenancy contract pay us a further commission of one-half (½) month's revised gross rental exclusive of Goods and Services Tax thereon for every Twelve (12) months or part thereof of the new or extended tenancy. There shall be no refund or reduction of any commission or any part thereof should the tenancy be prematurely terminated for any reason whatsoever.</p>
-  <p style="margin-top:10px">Should you be entitled to forfeit any good faith deposit or any other amount paid on account of the tenancy of the Property, you shall pay us one-half (½) of such monies, subject to a maximum sum equivalent to the said commission.</p>
-  <p style="margin-top:10px">You confirm that where applicable, you have obtained all preliminary approvals from the relevant parties and competent authorities to rent out the Property.</p>
-  <p style="margin-top:10px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
-  <p style="margin-top:16px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
-  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
-  <hr style="margin:24px 0;border:none;border-top:1px dashed #999">
+  <p style="margin-top:6px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
+  <p style="margin-top:6px">Dear Sir/Madam,</p>
+  <p style="margin-top:6px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
+  <p style="margin-top:6px">In consideration of our introduction of the tenant ${B(d.counterparty_name,'300','counterparty_name')} to rent your abovementioned property at an agreed monthly rental of S$${fmtAmt(d.monthly_rent)||B('','120')}, you have agreed to pay us a commission of S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling ${commWords||B('','300')} inclusive of Goods and Services Tax made payable to SRI PTE LTD.</p>
+  <p style="margin-top:6px">If the tenancy is renewed or extended, you shall upon signing of the new or extended tenancy contract pay us a further commission of one-half (½) month's revised gross rental exclusive of Goods and Services Tax thereon for every Twelve (12) months or part thereof of the new or extended tenancy. There shall be no refund or reduction of any commission or any part thereof should the tenancy be prematurely terminated for any reason whatsoever.</p>
+  <p style="margin-top:6px">Should you be entitled to forfeit any good faith deposit or any other amount paid on account of the tenancy of the Property, you shall pay us one-half (½) of such monies, subject to a maximum sum equivalent to the said commission.</p>
+  <p style="margin-top:6px">You confirm that where applicable, you have obtained all preliminary approvals from the relevant parties and competent authorities to rent out the Property.</p>
+  <p style="margin-top:6px">Please acknowledge on the acceptance copy of this letter to confirm your acceptance to the above.</p>
+  <p style="margin-top:10px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
+  <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
+  <hr style="margin:12px 0;border:none;border-top:1px dashed #999">
   <p style="text-align:center;font-weight:bold;margin-bottom:12px">Acceptance Copy</p>
   <p>We confirm acknowledgement of the commissions amount of Singapore Dollars <u>${commWords||B('','300')}</u> inclusive of Goods and Services Tax. Payment will be made upon receiving a copy of the Invoice from SRI Pte Ltd.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:20px">${clientSigs}</div>`;
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:12px">${clientSigs}</div></div>`;
 },
 comm_landlord_res: d => {
   const role = 'Landlord';
@@ -3538,19 +3545,19 @@ comm_landlord_res: d => {
   const clientSigs = clients.length ? clients.map((c,i)=>{ const isCo=c.co_option==='co'; return `<div><div class="sig-line">Signature of ${role}</div>${isCo?`<p>${B(c.co_name,'200')}</p><p>${B(c.co_signatory,'160')}${c.co_signatory_role?' ('+B(c.co_signatory_role,'100')+')':''}</p>`:`<p>Name: ${B(c.name,'160')}</p><p>NRIC/ID No.: ${B(c.nric,'120')}</p>`}${sigDateField(d,`sig_client_${i+1}_date`)}</div>`; }).join('') : `<div><div class="sig-line">Signature of ${role}</div><p>Name: ${B('','160')}</p><p>NRIC/ID No.: ${B('','120')}</p>${sigDateField(d,'sig_client_1_date')}</div>`;
   const commTotal = d.commission_total || d.commission;
   const commWords = commTotal ? `${numToWords(commTotal)} (S$${fmtAmt(commTotal)}/=)` : '';
-  return `${docInfoBar(d,'commission')}
+  return `<div class="doc-letter">${docInfoBar(d,'commission')}
   ${docBanner("Landlord's Commission Agreement","(For Residential Transactions Only)")}
   <p style="text-align:right">Date: ${B(fmtDateLong(d.agreement_date),'160')}</p>
-  <p style="margin-top:10px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
-  <p style="margin-top:10px">Dear Sir/Madam,</p>
-  <p style="margin-top:10px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
-  <p style="margin-top:10px">In consideration of our introduction of the tenant ${B(d.counterparty_name,'300','counterparty_name')} ${d.counterparty_nric?`(${B(d.counterparty_nric,'120','counterparty_nric')})`:''} to rent your abovementioned property at an agreed monthly rental of ${d.monthly_rent?numToWords(d.monthly_rent)+` (S$${fmtAmt(d.monthly_rent)}/=)`:B('','200')} for the duration of ${B(d.comm_lease_months,'40','comm_lease_months')} mths from ${d.comm_lease_start?B(fmtDateLong(d.comm_lease_start),'140'):B('','140')} to ${d.comm_lease_end?B(fmtDateLong(d.comm_lease_end),'140'):B('','140')}, the commission amount is S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling ${commWords||B('','300')} inclusive of Goods and Services Tax made payable to SRI PTE LTD.</p>
-  <p style="margin-top:16px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
-  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
-  <hr style="margin:24px 0;border:none;border-top:1px dashed #999">
+  <p style="margin-top:6px">${clients.map((c,i)=>{ const isCo=c.co_option==='co'; const indent=i===0?'To: ':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; '; let lines=`${indent}${B(c.name,'220')}${i===0?' (Billing Name)':''}`; if(c.address) lines+=`<br>${B(c.address,'300')}`; if(isCo){ lines+=`<br>c/o ${B(c.co_name,'220')}`; if(c.co_address) lines+=`<br>${B(c.co_address,'300')}`; } return lines; }).join('<br>')}</p>
+  <p style="margin-top:6px">Dear Sir/Madam,</p>
+  <p style="margin-top:6px"><strong>Property Address:</strong> ${B(d.property_address,'400','property_address')}</p>
+  <p style="margin-top:6px">In consideration of our introduction of the tenant ${B(d.counterparty_name,'300','counterparty_name')} ${d.counterparty_nric?`(${B(d.counterparty_nric,'120','counterparty_nric')})`:''} to rent your abovementioned property at an agreed monthly rental of ${d.monthly_rent?numToWords(d.monthly_rent)+` (S$${fmtAmt(d.monthly_rent)}/=)`:B('','200')} for the duration of ${B(d.comm_lease_months,'40','comm_lease_months')} mths from ${d.comm_lease_start?B(fmtDateLong(d.comm_lease_start),'140'):B('','140')} to ${d.comm_lease_end?B(fmtDateLong(d.comm_lease_end),'140'):B('','140')}, the commission amount is S$${fmtAmt(d.commission)||B('','120')} plus GST at the prevailing rate of ${B(d.gst_rate,'30','gst_rate')}% (S$${fmtAmt(d.gst_amount)||B('','80')}), totaling ${commWords||B('','300')} inclusive of Goods and Services Tax made payable to SRI PTE LTD.</p>
+  <p style="margin-top:10px">Yours Sincerely,<br><strong>SRI PTE LTD</strong></p>
+  <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:32px">${agentSigs}</div>
+  <hr style="margin:12px 0;border:none;border-top:1px dashed #999">
   <p style="text-align:center;font-weight:bold;margin-bottom:12px">Acceptance Copy</p>
   <p>We confirm acknowledgement of the commissions amount of <u>${commWords||B('','300')}</u> inclusive of Goods and Services Tax. Payment will be made upon receiving a copy of the Invoice from SRI Pte Ltd.</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:20px">${clientSigs}</div>`;
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-top:12px">${clientSigs}</div></div>`;
 },
 comm_tenant: d => {
   const role = 'Tenant';
